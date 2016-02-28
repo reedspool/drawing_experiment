@@ -13,8 +13,9 @@
 // Make a new canvas as a widget
 var $canvas = $('<canvas id="wholePageCanvas"></canvas>');
 var ctx;
-var last = { x: 0, y: 0 };
+var current = { x: 0, y: 0 };
 var all = [];
+var bDrawing = false;
 
 // Set the canvas resolution (whole page) by explicit height/width attributes
 $canvas.attr('width', $(document).width());
@@ -29,16 +30,58 @@ $('body').append($canvas);
 // Get drawing context
 ctx = $canvas.get(0).getContext('2d');
 
+// When the user clicks down, start drawing
+$('body').on('mousedown', function (evt, i) {
+  bDrawing = true;
+
+  var x = evt.pageX;
+  var y = evt.pageY;
+
+  // Set the starting position
+  current = { x: x, y: y };
+
+  // Store the beginning of the line.
+  all.push(current);
+});
+
+// When the user releases click
+$('body').on('mouseup', function (evt, i) {
+  var msg;
+
+  // Stop drawing
+  bDrawing = false;
+
+  // If any data significant data was collected...
+  if (all.length >= 3)
+  {
+    msg = all.map(function (d) { return d.x + ' ' + d.y }).join(' ')
+
+    $.post('/draw', { drawing: msg })
+      .then(console.log('Drawing sent: ' + msg))
+  }
+
+  // Either way, dump out our data (don't store small stuff)
+  all = [];
+});
+
 // When the mouse moves over the page, draw and record
 $('body').on('mousemove', function (evt, i) {
+  // If not drawing, do nothing
+  if ( ! bDrawing ) return;
+
   var x = evt.pageX;
   var y = evt.pageY;
 
   ctx.beginPath();
-  ctx.moveTo(last.x, last.y);
 
-  // line 1
-  ctx.lineTo(x, y);
+  // Start at previous point
+  ctx.moveTo(current.x, current.y);
+
+  // Update current
+  current = { x: x, y: y };
+
+  // Draw a line between last and now
+  ctx.lineTo(current.x, current.y);
 
   // // quadratic curve
   // ctx.quadraticCurveTo(230, 200, 250, 120);
@@ -46,20 +89,106 @@ $('body').on('mousemove', function (evt, i) {
   // // bezier curve
   // ctx.bezierCurveTo(290, -40, 300, 200, 400, 150);
 
-  // // line 2
-  // ctx.lineTo(500, 90);
-
   ctx.lineWidth = 5;
   ctx.strokeStyle = 'blue';
+
+  // Then finalize the stroke on the canvas
   ctx.stroke();
 
-
-  last = { x: x, y: y };
-  all.push(last);
+  // Record the new thing
+  all.push(current);
 });
+
+function drawLine(x1, y1, x2, y2) {
+  
+  ctx.beginPath();
+
+  // Start at previous point
+  ctx.moveTo(x1, y1);
+  
+  // Draw a line between last and now
+  ctx.lineTo(x2, y2);
+
+  // Then finalize the stroke on the canvas
+  ctx.stroke();
+}
 
 // Retrieve drawings from server
 $.get('/drawings.json')
-  .then(console.log.bind(console, 'Drawings: '));
+  .then(function (drawings) {
+    drawings = 
+      JSON.parse(drawings)
+        .map(function (d) {
+          var cur = [];
+          var x = '';
+          var y = '';
+          var flag = false;
 
-$.post('/draw', { drawing: 'like 5' })
+          for (var i = 0; i < d.length; i++) {
+            if (d[i] == ' ') {
+              // Have we hit the space in between x and y yet?
+              if (flag) {
+                // Ya, so this is our point.
+                // Validate it real quick
+                if (isNaN(parseInt(x, 10)) || isNaN(parseInt(y, 10)))
+                {
+                  throw new Error('Malformed numbers in string: ' + x + ' ' + y + ' in ' + d)
+                }
+                cur.push({x:parseInt(x, 10), y: parseInt(y, 10)})
+
+                // Reset everything
+                x = '';
+                y = '';
+                flag = false;
+              }
+              else
+              {
+                // This is the space between x and y
+                flag = true;
+              }
+            }
+            else
+            {
+              // Have we hit the space in between x and y yet?
+              if (flag)
+              {
+                y+=d[i];
+              }
+              else
+              {
+                x+=d[i];
+              }
+            }
+          }
+
+          if (x != '' && y != '')
+          {
+            // Add final one
+            cur.push({x:parseInt(x, 10), y: parseInt(y, 10)})
+
+          }
+          else 
+          {
+            // If one of them is still unempty, Equiv of XOR
+            if (x != '' || y != '') {
+              throw new Error('Malformed string: ' + d)
+
+            }
+          }
+
+          return cur;
+        });
+
+    for (var i = 0; i < drawings.length; i++)
+    {
+      for (var j = 0; j < (drawings[i].length - 1); j++)
+      {
+        drawLine(drawings[i][j].x, drawings[i][j].y,
+                  drawings[i][j + 1].x, drawings[i][j + 1].y);
+      }
+    }
+
+    // Pass along for no good reason
+    return drawings;
+  })
+  .then(console.log.bind(console, 'Drawings: '));
