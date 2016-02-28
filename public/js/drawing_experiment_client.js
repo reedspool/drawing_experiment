@@ -11,21 +11,22 @@
 /*
 /*- -~- -*/
 // Make a new canvas as a widget
-var $canvas = $('<canvas id="wholePageCanvas"></canvas>');
+var $canvas = $('<canvas id="drawSpaceCanvas"></canvas>');
 var ctx;
 var current = { x: 0, y: 0 };
 var all = [];
 var bDrawing = false;
 
-// Set the canvas resolution (whole page) by explicit height/width attributes
-$canvas.attr('width', $(document).width());
-$canvas.attr('height', $(document).height());
+// Align the canvas resolution to drawing space by explicit height/width attrs
+$canvas.attr('width', $('article').width());
+$canvas.attr('height', $('article').height());
 
-// Also hack the visual height of the canvas. Can't get this working with CSS
-$canvas.css('height', $(document).height());
+// Also hack the visual height/width of the canvas. Can't get this working with CSS
+$canvas.css('height', $('article').height());
+$canvas.css('width', $('article').width());
 
 // Add our widget to the page
-$('body').append($canvas);
+$('#drawSpace').append($canvas);
 
 // Get drawing context
 ctx = $canvas.get(0).getContext('2d');
@@ -124,6 +125,7 @@ $.get('/drawings.json')
           var y = '';
           var flag = false;
 
+          // Begin parsing the drawing string
           for (var i = 0; i < d.length; i++) {
             if (d[i] == ' ') {
               // Have we hit the space in between x and y yet?
