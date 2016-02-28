@@ -5,12 +5,25 @@
   <title>Lotus Sutra</title>
 
   <style>
+    html, body {
+      height: 100%;
+    }
+
     article {
       pointer-events: none;
     }
-  </style>
 
-  <script src="js/drawing_experiment_client.js"></script>
+    canvas#wholePageCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: -9001;
+      
+      height: 100%;
+      width: 100%;
+      
+    }
+  </style>
 </head>
 <body>
   <article>
@@ -146,5 +159,9 @@
     <p>99. Be well prepared and well minded; join your hands: he who is affectionate and merciful to the world is going to speak, is going to pour the endless rain of the law and refresh those that are waiting for enlightenment.</p>
     <p>100. And if some should feel doubt, uncertainty, or misgiving in any respect, then the Wise One shall remove it for his children, the Bodhisattvas here striving after enlightenment.</p>
   </article>
+
+
+  <script src="js/vendor/jquery-2.2.1.js"></script>
+  <script src="js/drawing_experiment_client.js"></script>
 </body>
 </html>

@@ -19,9 +19,12 @@ var serveStatic = require('serve-static');
 var compression = require('compression');
 var cookieSession = require('cookie-session');
 var bodyParser = require('body-parser');
+var drawings;
 var app;
 
 app = connect();
+
+drawings = [];
 
 /**
  * Middleware (each is reached on every request)
@@ -43,6 +46,7 @@ app.use(bodyParser.urlencoded());
  * Routes (may not continue)
  */
 
+// Post here when something is drawn to the screen
 app.use(
   '/draw',
   function (req, res, next)
@@ -50,10 +54,38 @@ app.use(
     switch (req.method)
     {
       case "GET":
-          console.log("Draw GET: ", req, req.body);
+        res.write("Cannot GET /draw, weirdo!");
+        res.end();
+        return;
         break;
       case "POST":
-          console.log("Draw POST: ", req, req.body);
+        if (req.body.drawing)
+        {
+          drawings.push(req.body.drawing)
+        }
+        break;
+    }
+
+    res.write("OK");
+    res.end();
+  });
+
+// Get all current drawings
+app.use(
+  '/drawings.json',
+  function (req, res, next)
+  {
+    switch (req.method)
+    {
+      case "GET":
+        res.write(JSON.stringify(drawings));
+        res.end();
+        return;
+        break;
+      case "POST":
+        res.write("Cannot POST /drawings, weirdo!");
+        res.end();
+        return;
         break;
     }
 
