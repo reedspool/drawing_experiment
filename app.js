@@ -19,12 +19,28 @@ var serveStatic = require('serve-static');
 var compression = require('compression');
 var cookieSession = require('cookie-session');
 var bodyParser = require('body-parser');
+var bDevMode = false;
 var drawings;
 var app;
+
+var development = {
+  port: 8181
+};
+
+var production = {
+  port: 80
+}
 
 app = connect();
 
 drawings = [];
+
+// Check mode
+if (process.argv[2] && process.argv[2].match("dev"))
+{
+  // If Dev mode requested
+  bDevMode = true;
+}
 
 /**
  * Middleware (each is reached on every request)
@@ -97,4 +113,8 @@ app.use(
 app.use(serveStatic(__dirname + '/public'))
 
 // Okay, start'r up!
-app.listen(8181);
+try {
+  app.listen(bDevMode ? development.port : production.port);  
+} catch (e) {
+  console.error("EACCESS: Try again as super or switch to dev mode.");
+}
