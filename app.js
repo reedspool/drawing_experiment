@@ -1,9 +1,8 @@
 /*- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -*/
 /*| 
-/*|  Server for Drawing Experiment
+/*|  Basic Flexible Server for AWS
 /*| 
-/*|    A drawing experiment where users of website can draw, and see others work
-/*|    right on the webpage itself.
+/*|    A modular server running on connect
 /*|   
 /*|  Author: [Reed](https://github.com/reedspool)
 /*|   
@@ -20,7 +19,6 @@ var compression = require('compression');
 var cookieSession = require('cookie-session');
 var bodyParser = require('body-parser');
 var bDevMode = false;
-var drawings;
 var app;
 
 var development = {
@@ -32,8 +30,6 @@ var production = {
 }
 
 app = connect();
-
-drawings = [];
 
 // Check mode
 if (process.argv[2] && process.argv[2].match("dev"))
@@ -62,52 +58,8 @@ app.use(bodyParser.urlencoded());
  * Routes (may not continue)
  */
 
-// Post here when something is drawn to the screen
-app.use(
-  '/draw',
-  function (req, res, next)
-  {
-    switch (req.method)
-    {
-      case "GET":
-        res.write("Cannot GET /draw, weirdo!");
-        res.end();
-        return;
-        break;
-      case "POST":
-        if (req.body.drawing)
-        {
-          drawings.push(req.body.drawing)
-        }
-        break;
-    }
-
-    res.write("OK");
-    res.end();
-  });
-
-// Get all current drawings
-app.use(
-  '/drawings.json',
-  function (req, res, next)
-  {
-    switch (req.method)
-    {
-      case "GET":
-        res.write(JSON.stringify(drawings));
-        res.end();
-        return;
-        break;
-      case "POST":
-        res.write("Cannot POST /drawings, weirdo!");
-        res.end();
-        return;
-        break;
-    }
-
-    res.write("OK");
-    res.end();
-  });
+// Include routes from drawing app
+require('./drawing')(app);
 
 // If no other route hit, attempt to serve static stuff
 app.use(serveStatic(__dirname + '/public'))
