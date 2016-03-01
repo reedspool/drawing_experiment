@@ -14,6 +14,7 @@
 module.exports = function (app)
 {
   var drawings = [];
+  var fs = require('fs');
 
   // Post here when something is drawn to the screen
   app.use(
@@ -30,7 +31,10 @@ module.exports = function (app)
         case "POST":
           if (req.body.drawing)
           {
-            drawings.push(req.body.drawing)
+            drawings.push(req.body.drawing);
+            fs.writeFile(
+              './drawings/' + (new Date().toUTCString()) + '.json',
+              JSON.stringify(drawings));
           }
           break;
       }

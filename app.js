@@ -59,7 +59,7 @@ app.use(bodyParser.urlencoded());
  */
 
 // Include routes from drawing app
-require('./drawing')(app);
+require('./drawing.js')(app);
 
 // If no other route hit, attempt to serve static stuff
 app.use(serveStatic(__dirname + '/public'))
