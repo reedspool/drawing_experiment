@@ -20,6 +20,8 @@ var segmentsQueue = [];
 var segmentsToBeAddedQueue = [];
 var DRAW_LENGTH = 60;
 var DOWNTIME = 50;
+var MAX_STROKES_IN_PLAY = 5;
+var allStrokes = new Queue();
 
 var widthCanvas = $('article').width();
 var heightCanvas = $('article').height()
@@ -167,6 +169,24 @@ function addLineSegment(x1, y1, x2, y2) {
   segmentsToBeAddedQueue.unshift([x1, y1, x2, y2])
 }
 
+function stepStrokes() {
+  // First, for each stroke in play, "slide" it over by one
+  inPlayStrokes.forEach(function (stroke)
+  {
+    stroke.slide();
+  });
+
+  // Then, check if any strokes fell out (or if we just revving up)
+  if (inPlayStrokes.length < MAX_STROKES_IN_PLAY)
+  {
+    // Yes, so add another stroke.
+    if (nextStrokesQueue.size() > 0)
+    {
+      inPlayStrokes.insert(nextStrokesQueue.dequeue());
+    }
+  }
+}
+
 function step() {
   // If there are any segments to be added...
   if (segmentsToBeAddedQueue.length > 0) {
@@ -179,6 +199,35 @@ function step() {
     // Remove the last line segment
     segmentsQueue.pop();
   }
+}
+
+function drawStrokes() {
+  // Clear the canvas
+  ctx.clearRect(0, 0, widthCanvas, heightCanvas);
+
+  // First, for each stroke in play, "slide" it over by one
+  inPlayStrokes.forEach(function (stroke)
+  {
+    stroke.getActive().forEach(function (segments)
+    {
+      drawLine.apply(null, segment);
+    });
+  });
+
+  // Draw each line
+  segmentsQueue.forEach(function (segment, i) {
+    // A segment is an array "[x1, y1, x2, y2]", the signature of drawline
+    drawLine.apply(null, segment);
+  });
+
+  // Draw each line segment currently being drawn
+  all.forEach(function (segment, i) {
+    // Do not draw last segment
+    if (i == all.length -1) return;
+
+    // Draw this segment, to the next one
+    drawLine(segment.x, segment.y, all[i+1].x, all[i+1].y);
+  });
 }
 
 function draw() {
@@ -207,8 +256,30 @@ function draw() {
  */
 
 
+// Mini queue class
+function Queue()
+{
+  // Fake private storage
+  this.__arr = [];
+}
+
+Queue.prototype.insert = function (item)
+{
+  this.__arr.unshift(item);
+}
+
+Queue.prototype.dequeue = function ()
+{
+  return this.__arr.pop();
+}
+
+Queue.prototype.size = function ()
+{
+  return this.__arr.length;
+}
+
 /**
- * Taken from
+ * Shuffle Taken from
  * http://stackoverflow.com/questions/6274339/how-can-i-shuffle-an-array-in-javascript
  * 
  * Shuffles array in place.
