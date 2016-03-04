@@ -13,7 +13,7 @@
 // Make a new canvas as a widget
 var $canvas = $('<canvas id="drawSpaceCanvas"></canvas>');
 var ctx;
-var current = { x: 0, y: 0 };
+var current;
 var all = [];
 var bDrawing = false;
 var segmentsQueue = [];
@@ -81,26 +81,17 @@ $('body').on('mouseup', function (evt, i) {
 
 // When the mouse moves over the page, draw and record
 $('body').on('mousemove', function (evt, i) {
-  // If not drawing, do nothing
-  if ( ! bDrawing ) return;
+  // If not drawing, pass along the event to others
+  if ( ! bDrawing ) return true;
 
   var x = evt.pageX;
   var y = evt.pageY;
 
-  ctx.beginPath();
-
-  // Start at previous point
-  ctx.moveTo(current.x, current.y);
+  // Draw the line the user just drew
+  drawLine(current.x, current.y, x, y);
 
   // Update current
   current = { x: x, y: y };
-
-  // Draw a line between last and now
-  ctx.lineTo(current.x, current.y);
-
-
-  // Then finalize the stroke on the canvas
-  ctx.stroke();
 
   // Record the new thing
   all.push(current);
@@ -110,9 +101,7 @@ $('body').on('mousemove', function (evt, i) {
 $.get('/drawings.json')
   .then(function (drawings) {
     // Parse JSON, then transform drawing string into objects
-    drawings = 
-      JSON.parse(drawings)
-        .map(parseDrawing);
+    drawings = JSON.parse(drawings).map(parseDrawing);
 
     for (var i = 0; i < drawings.length; i++)
     {
@@ -127,7 +116,17 @@ $.get('/drawings.json')
     return drawings;
   })
   .then(function (drawings) {
-    setInterval(step, DOWNTIME);
+    // Set up a timer
+    setInterval(function () {
+      // Draw at the correct time
+      requestAnimationFrame(function () {
+        // Move stuff along
+        step();
+
+        // Paint the canvas
+        draw();
+      })
+    }, DOWNTIME);
   })
   .then(console.log.bind(console, 'Drawings: '));
 
@@ -166,6 +165,20 @@ function addLineSegment(x1, y1, x2, y2) {
 }
 
 function step() {
+  // If there are any segments to be added...
+  if (segmentsToBeAddedQueue.length > 0) {
+    // TODO: Maybe time for a dedicated Queue object?
+    segmentsQueue.unshift(segmentsToBeAddedQueue.pop())
+  }
+
+  // If we're over our limit, or there's nothing more to be added...
+  if (segmentsQueue.length > DRAW_LENGTH || segmentsToBeAddedQueue.length == 0) {
+    // Remove the last line segment
+    segmentsQueue.pop();
+  }
+}
+
+function draw() {
   // Clear the canvas
   ctx.clearRect(0, 0, widthCanvas, heightCanvas);
 
@@ -183,18 +196,6 @@ function step() {
     // Draw this segment, to the next one
     drawLine(segment.x, segment.y, all[i+1].x, all[i+1].y);
   });
-
-  // If there are any segments to be added...
-  if (segmentsToBeAddedQueue.length > 0) {
-    // TODO: Maybe time for a dedicated Queue object?
-    segmentsQueue.unshift(segmentsToBeAddedQueue.pop())
-  }
-
-  // If we're over our limit, or there's nothing more to be added...
-  if (segmentsQueue.length > DRAW_LENGTH || segmentsToBeAddedQueue.length == 0) {
-    // Remove the last line segment
-    segmentsQueue.pop();
-  }
 }
 
 
