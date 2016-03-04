@@ -1,0 +1,26 @@
+{
+  "name": "drawing_experiment",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reedspool/drawing_experiment.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/reedspool/drawing_experiment/issues"
+  },
+  "homepage": "https://github.com/reedspool/drawing_experiment#readme",
+  "dependencies": {
+    "body-parser": "^1.15.0",
+    "compression": "^1.6.1",
+    "connect": "^3.4.1",
+    "cookie-session": "^2.0.0-alpha.1",
+    "serve-static": "^1.10.2"
+  }
+}
