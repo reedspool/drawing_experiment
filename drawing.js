@@ -15,6 +15,7 @@ module.exports = function (app)
 {
   var drawings = [];
   var fs = require('fs');
+  var drawingsOut = "[]";
 
   // Read the latest file of drawings back in
   fs.readFile('./drawings.json',
@@ -25,6 +26,9 @@ module.exports = function (app)
       if (err) return;
 
       drawings = JSON.parse(file);
+
+      // Set our cached output
+      drawingsOut = JSON.stringify(drawings);
     });
 
   // Post here when something is drawn to the screen
@@ -44,7 +48,13 @@ module.exports = function (app)
           if (req.body.drawing)
           {
             timestamp = new Date().toUTCString();
+
+            // Add the new drawing to our lot
             drawings.push(req.body.drawing);
+
+            // Reset our cached output
+            drawingsOut = JSON.stringify(drawings);
+
             fs.writeFile(
               './drawings/' + timestamp + '.json',
               JSON.stringify(drawings),
@@ -76,7 +86,7 @@ module.exports = function (app)
       switch (req.method)
       {
         case "GET":
-          res.write(JSON.stringify(drawings));
+          res.write(drawingsOut);
           res.end();
           return;
           break;

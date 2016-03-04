@@ -103,6 +103,9 @@ $.get('/drawings.json')
     // Parse JSON, then transform drawing string into objects
     drawings = JSON.parse(drawings).map(parseDrawing);
 
+    // Shuffle all drawings
+    shuffle(drawings);
+
     for (var i = 0; i < drawings.length; i++)
     {
       for (var j = 0; j < (drawings[i].length - 1); j++)
@@ -203,6 +206,24 @@ function draw() {
  * Static functions
  */
 
+
+/**
+ * Taken from
+ * http://stackoverflow.com/questions/6274339/how-can-i-shuffle-an-array-in-javascript
+ * 
+ * Shuffles array in place.
+ * @param {Array} a items The array containing the items.
+ * @return {Array} a The shuffled array
+ */
+function shuffle(a) {
+    var j, x, i;
+    for (i = a.length; i; i -= 1) {
+        j = Math.floor(Math.random() * i);
+        x = a[i - 1];
+        a[i - 1] = a[j];
+        a[j] = x;
+    }
+}
 
 // Straightforward parsing of drawing strings "x1 y1 x2 y2 ..."
 function parseDrawing(d) {
