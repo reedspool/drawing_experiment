@@ -16,11 +16,23 @@ module.exports = function (app)
   var drawings = [];
   var fs = require('fs');
 
+  // Read the latest file of drawings back in
+  fs.readFile('./drawings.json',
+    function (err, file)
+    {
+      // For dev, whatever if there's none there, do nothing
+      // if (err) throw err;
+      if (err) return;
+
+      drawings = JSON.parse(file);
+    });
+
   // Post here when something is drawn to the screen
   app.use(
     '/draw',
     function (req, res, next)
     {
+      var timestamp;
       switch (req.method)
       {
         case "GET":
@@ -31,10 +43,23 @@ module.exports = function (app)
         case "POST":
           if (req.body.drawing)
           {
+            timestamp = new Date().toUTCString();
             drawings.push(req.body.drawing);
             fs.writeFile(
-              './drawings/' + (new Date().toUTCString()) + '.json',
-              JSON.stringify(drawings));
+              './drawings/' + timestamp + '.json',
+              JSON.stringify(drawings),
+              function (err)
+              {
+                if (err) throw err;
+
+                fs.unlink('./drawings.json', 
+                  function (err)
+                  {
+                    // Don't care about err enoent here
+                    fs.symlink('./drawings/' + timestamp + '.json', './drawings.json');
+                  });
+              });
+
           }
           break;
       }
