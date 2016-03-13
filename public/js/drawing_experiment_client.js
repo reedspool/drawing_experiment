@@ -5,6 +5,8 @@
 /*  1) Send drawings I make to server
 /*  2) Draw recordings I receive from server
 /*
+/*  A "drawing" is a list of commands which describe a set of canvas operations
+/*
 /*  Author: [Reed](https://github.com/reedspool)
 /*
 /*  Dependencies: jQuery
@@ -14,14 +16,14 @@
 var $canvas = $('<canvas id="drawSpaceCanvas"></canvas>');
 var ctx;
 var current;
-var all = [];
+var currentDrawingPoints = [];
 var bDrawing = false;
 var segmentsQueue = [];
 var segmentsToBeAddedQueue = [];
 var DRAW_LENGTH = 60;
 var DOWNTIME = 50;
 var MAX_STROKES_IN_PLAY = 5;
-var allStrokes = new Queue();
+var allStrokes = new LinkedListDeque();
 
 var widthCanvas = $('article').width();
 var heightCanvas = $('article').height()
@@ -42,16 +44,18 @@ ctx = $canvas.get(0).getContext('2d');
 
 // When the user clicks down, start drawing
 $('body').on('mousedown', function (evt, i) {
+  var x, y;
+
   bDrawing = true;
 
-  var x = evt.pageX;
-  var y = evt.pageY;
+  x = evt.pageX;
+  y = evt.pageY;
 
   // Set the starting position
   current = { x: x, y: y };
 
   // Store the beginning of the line.
-  all.push(current);
+  currentDrawingPoints.push(current);
 });
 
 // When the user releases click
@@ -62,23 +66,24 @@ $('body').on('mouseup', function (evt, i) {
   bDrawing = false;
 
   // If any data significant data was collected...
-  if (all.length >= 3)
+  if (currentDrawingPoints.length >= 3)
   {
-    msg = all.map(function (d) { return d.x + ' ' + d.y }).join(' ')
+    msg = currentDrawingPoints.map(function (d) { return d.x + ' ' + d.y }).join(' ')
 
+    // Send to server (async), and continue
     $.post('/draw', { drawing: msg })
       .then(console.log('Drawing sent: ' + msg))
   }
 
   // Add to total drawings on page (in reverse)
-  for (i = all.length - 2; i >= 0 ; i--) {
+  for (i = currentDrawingPoints.length - 2; i >= 0 ; i--) {
     // Violating my own "Queue" rule, be cute by plopping their drawing
     // at the beginning of the "to disappear" list.
-    segmentsQueue.push([all[i].x, all[i].y, all[i+1].x, all[i+1].y]);
+    segmentsQueue.push([currentDrawingPoints[i].x, currentDrawingPoints[i].y, currentDrawingPoints[i+1].x, currentDrawingPoints[i+1].y]);
   }
 
   // Dump out our data now that it's committed
-  all = [];
+  currentDrawingPoints = [];
 });
 
 // When the mouse moves over the page, draw and record
@@ -96,7 +101,7 @@ $('body').on('mousemove', function (evt, i) {
   current = { x: x, y: y };
 
   // Record the new thing
-  all.push(current);
+  currentDrawingPoints.push(current);
 });
 
 // Retrieve drawings from server
@@ -205,30 +210,41 @@ function drawStrokes() {
   // Clear the canvas
   ctx.clearRect(0, 0, widthCanvas, heightCanvas);
 
-  // First, for each stroke in play, "slide" it over by one
+  getLiveSegments().forEach(function (segment)
+    {
+      // A segment is an array "[x1, y1, x2, y2]", the signature of drawline
+      drawLine.apply(null, segment);
+    });
+
+  // First, for each stroke in play
   inPlayStrokes.forEach(function (stroke)
   {
+    // Get the active set of segments
     stroke.getActive().forEach(function (segments)
     {
-      drawLine.apply(null, segment);
+      // And draw each one
+      segments.forEach(function (segment)
+      {
+        // A segment is an array "[x1, y1, x2, y2]", the signature of drawline
+        liveSegments.push(segment);
+      });
     });
   });
 
-  // Draw each line
-  segmentsQueue.forEach(function (segment, i) {
-    // A segment is an array "[x1, y1, x2, y2]", the signature of drawline
-    drawLine.apply(null, segment);
-  });
-
   // Draw each line segment currently being drawn
-  all.forEach(function (segment, i) {
+  currentDrawingPoints.forEach(function (point, index) {
     // Do not draw last segment
-    if (i == all.length -1) return;
+    if (index == currentDrawingPoints.length -1) return;
 
     // Draw this segment, to the next one
-    drawLine(segment.x, segment.y, all[i+1].x, all[i+1].y);
+    liveSegments.push(
+      [
+        point.x, point.y, 
+        currentDrawingPoints[index + 1].x, currentDrawingPoints[index + 1].y
+      ]);
   });
 }
+
 
 function draw() {
   // Clear the canvas
@@ -241,12 +257,12 @@ function draw() {
   });
 
   // Draw each line segment currently being drawn
-  all.forEach(function (segment, i) {
+  currentDrawingPoints.forEach(function (segment, i) {
     // Do not draw last segment
-    if (i == all.length -1) return;
+    if (i == currentDrawingPoints.length -1) return;
 
     // Draw this segment, to the next one
-    drawLine(segment.x, segment.y, all[i+1].x, all[i+1].y);
+    drawLine(segment.x, segment.y, currentDrawingPoints[i+1].x, currentDrawingPoints[i+1].y);
   });
 }
 
@@ -255,28 +271,6 @@ function draw() {
  * Static functions
  */
 
-
-// Mini queue class
-function Queue()
-{
-  // Fake private storage
-  this.__arr = [];
-}
-
-Queue.prototype.insert = function (item)
-{
-  this.__arr.unshift(item);
-}
-
-Queue.prototype.dequeue = function ()
-{
-  return this.__arr.pop();
-}
-
-Queue.prototype.size = function ()
-{
-  return this.__arr.length;
-}
 
 /**
  * Shuffle Taken from
